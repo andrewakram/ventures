@@ -42,7 +42,7 @@ class TransactionController extends BaseController
         $input = $request->all();
         if(isset($user) && $user->type=='admin'){
             $validator = Validator::make($input, [
-                'user_id' => 'required|exists:users,id',
+                'user_id' => 'required|exists:users,id,type,user',
                 'category_id' => 'required|exists:categories,id',
                 'sub_category_id' => 'sometimes|exists:sub_categories,id',
                 'due_on' => 'required|date_format:Y-m-d',
