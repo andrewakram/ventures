@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\API\BaseController as BaseController;
@@ -17,6 +18,18 @@ class TransactionController extends BaseController
         $user = authUser();
         if(isset($user) && $user->type=='user'){
             $transactions = Transaction::where('user_id',$user->id)->get();
+
+            foreach ($transactions as $transaction){
+                if(Carbon::now() > Carbon::parse($transaction->due_on) ){
+                    if(isset($transaction->payments) && sizeof($transaction->payments) > 0) {
+                        if($transaction->payments->sum('amount') < $transaction->amount){
+                            Transaction::whereId($transaction->id)
+                                ->update(['status' => 'overdue']);
+                            $transaction->status = "overdue";
+                        }
+                    }
+                }
+            }
             return $this->handleResponse(TransactionResource::collection($transactions), 'Transaction retrieved.');
         }
         return $this->handleError("Not authorize",[],"401");
@@ -59,6 +72,17 @@ class TransactionController extends BaseController
             if (is_null($transaction)) {
                 return $this->handleError('Transaction not found!');
             }
+
+            if(Carbon::now() > Carbon::parse($transaction->due_on) ){
+                if(isset($transaction->payments) && sizeof($transaction->payments) > 0) {
+                    if($transaction->payments->sum('amount') < $transaction->amount){
+                        Transaction::whereId($id)
+                            ->update(['status' => 'overdue']);
+                        $transaction->status = "overdue";
+                    }
+                }
+            }
+
             return $this->handleResponse(new TransactionResource($transaction), 'Transaction retrieved.');
         }
         return $this->handleError("Not authorize",[],"401");
